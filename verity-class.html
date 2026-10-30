@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verity’s Class</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+
+<!-- =====================================================================
+     EDIT HERE: everything you need to change lives in this one block.
+
+     TRANSLATING: any line of text can be a plain string OR an object with
+     one entry per language, e.g.   say:{ en:'Hello!', tl:'Kumusta!' }
+     To add a language, add it to "languages", then add it to each line you
+     want translated and to "ui" (buttons and labels). Anything missing falls
+     back to the default "lang". Press L in the page to switch language.
+     Keep quiz options in the same order in every language.
+
+     TYPEWRITER: typeSpeed is milliseconds per letter (0 turns it off).
+     Enter, Z or X (or clicking the speech bubble) skips to the end of a line.
+
+     deck types:
+       title  -> { type:'title',  title, sub }
+       lesson -> { type:'lesson', title, text, bullets:[...], c:'#hexcolor', say }
+       quiz   -> { type:'quiz', q, options:[...], answer:<index, starts at 0>,
+                   hints:[first hint, second hint, ...], explain, say }
+       game rounds: add  game:true, round:'Round 1: Pagpili'  to a quiz question
+                    (one try, +1 point for the team whose turn it is; the yellow
+                    ball shows the answer and explanation).
+       match  -> { type:'match', game:true, round, q, choices:[...],
+                   pairs:[[text, index of correct choice], ...], explain }
+       end    -> { type:'end', title, sub }   ({score} and {total} are filled in)
+     Wrong answer = Verity gives the next hint. Reorder or add slides freely.
+     Music: save your song next to this file as verity_theme.ogg (or change the
+     name in musicUrl below). If the file isn't found, the built-in tune
+     plays instead. Set musicUrl:'' to always use the built-in tune.
+     ===================================================================== -->
+<script>
+const CONFIG = {
+  teacher: 'Verity',
+  lang: 'tl',                                   // default language
+  languages: { en:'English', tl:'Filipino' },   // shown when you press L
+  typeSpeed: 35,                                // ms per letter, 0 = off
+  // Verity shuffles between these pictures (saved in the same folder as this file)
+  // each time he speaks. They are skipped if a file is missing.
+  sprites: ['Mani.png', 'Moggity.png', 'Obesity.png'],
+  useBall: true,                                 // also include the built-in yellow ball
+  // Everything moves smoothly by default. Set true to calm all animation when the
+  // computer has "reduce motion" turned on (Windows: animation effects off).
+  reduceMotion: false,
+  teams: ['Pangkat 1', 'Pangkat 2', 'Pangkat 3'],   // game teams (take turns). Use [] for no teams
+  musicUrl: 'verity_theme.ogg',
+  // Verity's picture is already built into this file (see the block below this one).
+  // To use your own files instead, fill this in, e.g. { happy:'a.png', sad:'b.png' }.
+  // 'sad' and 'neutral' are optional and fall back to happy.
+  teacherImages: {},
+
+  // Buttons and labels
+  ui: {
+    en: { move:'← → to move', musicStart:'♪ Music: starts on key press (M)', musicOn:'♪ Music: on (M)',
+          musicOff:'♪ Music: off (M)', lang:'Language', notQuite:'Not quite.', hint:'Hint:',
+          tryAgain:'Try again.', correct:'Correct!', take:'Take your time.', learn:'Let’s learn something new.',
+          question:'Question', of:'of', typeHere:'Click here or press Enter to type', send:'Submit', classStarts:'Class Starts', classDismissed:'Class Dismissed',
+          turn:'Turn:', wrongAns:'Not quite.', ballTip:'Click the yellow ball for the answer' },
+    tl: { move:'← → para gumalaw', musicStart:'♪ Musika: magsisimula sa pindot (M)', musicOn:'♪ Musika: bukas (M)',
+          musicOff:'♪ Musika: patay (M)', lang:'Wika', notQuite:'Hindi pa tama.', hint:'Pahiwatig:',
+          tryAgain:'Subukan ulit.', correct:'Tama!', take:'Dahan-dahan lang.', learn:'Matuto tayo ng bago.',
+          question:'Tanong', of:'sa', typeHere:'I-click dito o pindutin ang Enter para magsulat', send:'Isumite', classStarts:'Simula ng Klase', classDismissed:'Tapos na ang Klase',
+          turn:'Sasagot:', wrongAns:'Hindi tama.', ballTip:'Pindutin ang dilaw na bola para sa sagot' }
+  },
+
+  deck: [
+    { type:'title',
+      title:{ en:'Purposes of Speaking', tl:'Layunin ng Pagsasalita' },
+      sub:{ en:'Hello, scholars of the people! I’m Verity. Let’s study the purposes of speaking.',
+            tl:'Kumusta mga iskolar ng bayan! Ako ay si Verity. Pag-aralan natin ang Layunin ng Pagsasalita.' } },
+
+    { type:'controls', title:{ en:'Controls', tl:'Mga Kontrol' },
+      rows:[
+        { keys:['←','→'], text:{ en:'Go back or forward one page', tl:'Bumalik o pumunta sa susunod na pahina' } },
+        { keys:['Home','End'], text:{ en:'Jump to the first or last page', tl:'Pumunta sa una o huling pahina' } },
+        { keys:['1','2','3','4'], text:{ en:'Pick an answer on multiple-choice questions', tl:'Pumili ng sagot sa mga may pagpipilian' } },
+        { keys:['Enter'], text:{ en:'Start typing on questions that need a written answer', tl:'Magsulat ng sagot sa mga tanong na isinusulat' } },
+        { keys:['Esc'], text:{ en:'Leave the answer box so the arrow keys work again', tl:'Lumabas sa kahon ng sagot para gumana ulit ang mga arrow' } },
+        { keys:['Z','X'], text:{ en:'Skip Verity’s typing (you can also click his speech bubble)', tl:'Laktawan ang pagta-type ni Verity (puwede ring i-click ang usapan)' } },
+        { keys:['●'], text:{ en:'Click Verity’s picture for the answer and explanation', tl:'Pindutin ang larawan ni Verity para sa sagot at paliwanag' } },
+        { keys:['M'], text:{ en:'Music on or off', tl:'Musika: bukas o patay' } },
+        { keys:['L'], text:{ en:'Change language', tl:'Palitan ang wika' } },
+        { keys:['F'], text:{ en:'Fullscreen', tl:'Fullscreen' } },
+        { keys:['R'], text:{ en:'Start over', tl:'Ulitin mula sa simula' } } ],
+      say:{ en:'Learn the controls before we start.', tl:'Alamin muna ang mga kontrol bago tayo magsimula.' } },
+
+    { type:'lesson', c:'#5b9b34', title:'Panimula',
+      text:'Ang bawat pagsasalita ay may layunin.',
+      bullets:['Ayon kay Badayos (2008), dalawa ang layunin ng pagtuturo ng kasanayan sa pagsasalita: ang interaksyunal at ang transaksyunal.',
+               'Kapag alam mo ang layunin mo, mas madali mong mapipili ang angkop na salita, tono, at paraan ng pagsasalita.',
+               'Mas naiintindihan din ng tagapakinig ang mensahe.'],
+      say:'Magsimula tayo sa dahilan kung bakit tayo nagsasalita.' },
+
+    { type:'lesson', c:'#7a7a7a', title:'Kahulugan ng Layunin ng Pagsasalita',
+      text:'Ito ang dahilan kung bakit nagsasalita ang isang tao.',
+      bullets:['Ito ang nais niyang makamit o iparating sa mga tagapakinig sa pamamagitan ng kanyang mga salita.',
+               'Nakapokus ang pagtuturo ng pagsasalita sa dalawang layunin: interaksyunal at transaksyunal.'],
+      say:'Dalawa ang tatandaan natin.' },
+
+    { type:'lesson', c:'#e8913a', title:'Interaksyunal',
+      text:'Para sa pakikitungo sa kapwa at pagpapahayag ng sarili.',
+      bullets:['Makitungo sa iba’t ibang konteksto sosyal: pagbati, pagpapakilala, pagpapaalam, paghingi ng paumanhin, at pakikiramay.',
+               'Magpahayag ng damdamin at opinyon: pag-uugnay ng personal na paniniwala at karanasan, pag-iiba ng tono ayon sa emosyon, at pagpapahayag ng pagkatuwa at pagkagalit.'],
+      say:'Pakikipagkapwa ang puso ng interaksyunal.' },
+
+    { type:'lesson', c:'#4d7be3', title:'Transaksyunal',
+      text:'Para sa paghahatid ng impormasyon at pagkamit ng layunin.',
+      bullets:['Maghatid ng mensahe: pasalitang pag-uulat na nangangailangan ng ganap na kawastuhan at katiyakan.',
+               'Magbigay ng panuto at direksiyon: nililinaw ang mga hakbang bago simulan ang gawain.',
+               'Magtanong nang may layunin: makalikom ng datos, humingi ng paglilinaw, at maghambing ng bagay-bagay.',
+               'Manghikayat: himukin ang malawakan o panlipunang pagkilos para gumawa ng aksiyon o desisyon.'],
+      say:'Impormasyon at aksiyon ang pokus ng transaksyunal.' },
+
+    { type:'lesson', c:'#a02a2a', title:'Mga Elemento at Estratehiya',
+      text:'Mga bagay na dapat isaalang-alang sa pagsasalita.',
+      bullets:['Mga elemento ng komunikasyon: tagapagsalita, mensahe, tsanel, tagapakinig, tugon (feedback), at ingay.',
+               'Estratehiya: alamin ang tagapakinig at okasyon, piliin ang angkop na tono at wika, at sabihin nang malinaw ang pangunahing mensahe.'] },
+
+    { type:'lesson', c:'#f5d142', title:'Mga Halimbawa',
+      text:'Sitwasyong nagpapakita ng bawat layunin.',
+      bullets:['Interaksyunal: pagbati at pagpapakilala sa bagong kaklase, pakikiramay, at pagbabahagi ng nararamdaman.',
+               'Transaksyunal: pag-uulat sa klase, pagbibigay ng direksiyon, pakikipanayam, at talumpati ng kandidato.'] },
+
+    { type:'lesson', c:'#3c8c34', title:'Kahalagahan',
+      text:'Bakit mahalagang pag-aralan ito?',
+      bullets:['Sa paaralan: nakatutulong ito sa pag-uulat, pakikipanayam, at debate.',
+               'Sa pang-araw-araw na buhay: nakatutulong ito sa magalang at malinaw na pakikipag-usap sa pamilya, kaibigan, at ibang tao.'] },
+
+    { type:'lesson', c:'#f5d142', title:'Laro: Hulaan ang Layunin',
+      text:'Tukuyin kung interaksyunal o transaksyunal ang layunin ng bawat sitwasyon.',
+      bullets:['Limang round: pagpili, interaksyunal o transaksyunal, tama o mali, pagtutugma, at pagpupuno ng patlang.',
+               'Salitan ang mga pangkat. Isang sagot lang bawat tanong, at may 1 puntos ang tama.',
+               'Pagkatapos sumagot, ipapakita ang tamang sagot at paliwanag.',
+               'Pindutin ang dilaw na bola (si Verity) para sa sagot at paliwanag.'],
+      say:'Handa na ba ang mga pangkat? Simulan na natin!' },
+
+    { type:'quiz', game:true, round:'Round 1: Pagpili', answer:1,
+      q:'Alin ang halimbawa ng transaksyunal na pagsasalita?',
+      options:['Pagbati sa bagong kaklase','Pag-uulat sa klase','Pakikiramay sa kaibigan','Pagbabahagi ng nararamdaman'],
+      explain:'Naghahatid ng impormasyon ang pag-uulat sa klase, kaya transaksyunal ito.' },
+    { type:'quiz', game:true, round:'Round 1: Pagpili', answer:2,
+      q:'Alin ang halimbawa ng interaksyunal na pagsasalita?',
+      options:['Talumpati ng kandidato','Pagbibigay ng direksiyon','Pagpapakilala sa bagong kaklase','Pakikipanayam'],
+      explain:'Pakikitungo sa kapwa ang pagpapakilala, kaya interaksyunal ito.' },
+
+    { type:'quiz', game:true, round:'Round 2: Interaksyunal o Transaksyunal?', answer:0,
+      q:'Humihingi ng paumanhin si Ana sa kaklase niya.',
+      options:['Interaksyunal','Transaksyunal'],
+      explain:'Pakikitungo sa kapwa ang paghingi ng paumanhin, kaya interaksyunal.' },
+    { type:'quiz', game:true, round:'Round 2: Interaksyunal o Transaksyunal?', answer:1,
+      q:'Ipinaliliwanag ng guro ang mga hakbang bago simulan ang gawain.',
+      options:['Interaksyunal','Transaksyunal'],
+      explain:'Pagbibigay ito ng panuto, kaya transaksyunal.' },
+    { type:'quiz', game:true, round:'Round 2: Interaksyunal o Transaksyunal?', answer:1,
+      q:'Nagtatanong ang reporter para makalikom ng datos.',
+      options:['Interaksyunal','Transaksyunal'],
+      explain:'Pagtatanong ito nang may layunin, kaya transaksyunal.' },
+
+    { type:'quiz', game:true, round:'Round 3: Tama o Mali', answer:0,
+      q:'Ang pagpapahayag ng pagkatuwa ay interaksyunal.',
+      options:[{ en:'True', tl:'Tama' }, { en:'False', tl:'Mali' }],
+      explain:'Ang pagpapahayag ng damdamin, tulad ng pagkatuwa, ay interaksyunal.' },
+    { type:'quiz', game:true, round:'Round 3: Tama o Mali', answer:1,
+      q:'Ang pakikipanayam ay interaksyunal.',
+      options:[{ en:'True', tl:'Tama' }, { en:'False', tl:'Mali' }],
+      explain:'Mali ang pahayag. Transaksyunal ang pakikipanayam.' },
+
+    { type:'match', game:true, round:'Round 4: Pagtutugma',
+      q:'Itugma ang bawat sitwasyon sa tamang layunin.',
+      choices:['Interaksyunal','Transaksyunal'],
+      pairs:[['Pagpapaalam',0],['Pag-uulat na may ganap na kawastuhan',1],['Pakikiramay',0],['Panghihikayat',1]],
+      explain:'Interaksyunal ang pagpapaalam at pakikiramay. Transaksyunal ang pag-uulat at panghihikayat.' },
+
+    { type:'quiz', game:true, round:'Round 5: Pagpupuno ng Patlang',
+      q:'Ang pagbibigay ng direksiyon ay layuning ______.',
+      keywords:['transaksyunal','transaksiyunal','transaksyonal','transaksiyonal'],
+      explain:'Transaksyunal ang tamang sagot.' },
+    { type:'quiz', game:true, round:'Round 5: Pagpupuno ng Patlang',
+      q:'Ang pagbati at pakikiramay ay layuning ______.',
+      keywords:['interaksyunal','interaksiyunal','interaksyonal','interaksiyonal'],
+      explain:'Interaksyunal ang tamang sagot.' },
+
+    { type:'lesson', c:'#4de3d6', title:'Iproseso Natin',
+      text:'Pag-usapan ang inyong karanasan sa laro.',
+      bullets:['Ano ang pagkakaiba ng interaksyunal at transaksyunal?','Sa anong sitwasyon mo ginagamit ang bawat isa?'],
+      say:'Sagutin ninyo ito sa sarili ninyong salita.' },
+
+    { type:'lesson', c:'#8a6a3c', title:'Pagsusulit: 10 Aytem',
+      text:'Panuto:',
+      bullets:['Piliin ang titik ng tamang sagot sa bilang 1 hanggang 5.','Pindutin ang Tama o Mali sa bilang 6 hanggang 8.','Isulat ang sagot sa bilang 9 at 10.'],
+      say:'Kaya mo ito. Tutulungan kita kapag nahirapan ka.' },
+
+    { type:'quiz', answer:1,
+      q:'Ilang layunin ang pagtuturo ng kasanayan sa pagsasalita ayon kay Badayos (2008)?',
+      options:['Isa','Dalawa','Tatlo','Apat'],
+      hints:['Ang mga layunin ay nahahati sa transaksyunal at interaksyunal.','Bilangin ang dalawang pangalang iyon.'],
+      explain:'Tama! Dalawa ang layunin: transaksyunal at interaksyunal.',
+      say:{ en:'Take your time. I’ll help if you get stuck.', tl:'Dahan-dahan lang. Tutulungan kita kapag nahirapan ka.' } },
+
+    { type:'quiz', answer:2,
+      q:'Alin ang interaksyunal na layunin?',
+      options:['Magbigay ng direksiyon','Manghikayat','Makitungo sa iba’t ibang konteksto sosyal','Maghatid ng mensahe'],
+      hints:['Ang interaksyunal ay tungkol sa pakikipagkapwa.','Alin ang may kinalaman sa lipunan at pakikisalamuha?'],
+      explain:'Tama! Ang interaksyunal ay para sa pakikitungo sa iba’t ibang konteksto sosyal.' },
+
+    { type:'quiz', answer:1,
+      q:'Ang pagbibigay ng panuto at direksiyon ay layuning ______.',
+      options:['interaksyunal','transaksyunal','personal','panlibang'],
+      hints:['Ang layuning ito ay para sa paghahatid ng impormasyon at tagubilin.','Hindi ito tungkol sa pakikipagkaibigan.'],
+      explain:'Tama! Transaksyunal ang pagbibigay ng panuto at direksiyon.' },
+
+    { type:'quiz', answer:2,
+      q:'Alin ang halimbawa ng pagpapahayag ng damdamin at opinyon?',
+      options:['Pag-uulat ng datos','Pagtatanong para sa datos','Pagpapahayag ng pagkatuwa o pagkagalit','Pagbibigay ng hakbang'],
+      hints:['Hanapin ang sagot na tungkol sa nararamdaman.','Ang damdamin ay tulad ng tuwa at galit.'],
+      explain:'Tama! Ang pagpapahayag ng pagkatuwa o pagkagalit ay pagpapahayag ng damdamin.' },
+
+    { type:'quiz', answer:1,
+      q:'Ang pagtatanong upang makalikom ng datos at humingi ng paglilinaw ay layuning ______.',
+      options:['interaksyunal','transaksyunal','pampersonal','pampalipas-oras'],
+      hints:['Ang layuning ito ay para sa pagkuha ng impormasyon.','Kapareho ito ng layunin sa pagbibigay ng panuto.'],
+      explain:'Tama! Transaksyunal ang pagtatanong para sa datos at paglilinaw.' },
+
+    { type:'quiz', answer:0,
+      q:'Tama o Mali: Kasama sa interaksyunal ang pagbati, pagpapakilala, at pakikiramay.',
+      options:[{ en:'True', tl:'Tama' }, { en:'False', tl:'Mali' }],
+      hints:['Isipin ang pakikisalamuha sa kapwa.','Ang pagbati at pakikiramay ay nagpapanatili ng ugnayan.'],
+      explain:'Tama! Interaksyunal ang pagbati, pagpapakilala, at pakikiramay.' },
+
+    { type:'quiz', answer:0,
+      q:'Tama o Mali: Ang pag-uulat na nangangailangan ng ganap na kawastuhan ay transaksyunal.',
+      options:[{ en:'True', tl:'Tama' }, { en:'False', tl:'Mali' }],
+      hints:['Mahalaga ang kawastuhan sa paghahatid ng impormasyon.','Ang pag-uulat ay paghahatid ng datos.'],
+      explain:'Tama! Transaksyunal ang pag-uulat na nangangailangan ng ganap na kawastuhan.' },
+
+    { type:'quiz', answer:1,
+      q:'Tama o Mali: Ang panghihikayat ay interaksyunal.',
+      options:[{ en:'True', tl:'Tama' }, { en:'False', tl:'Mali' }],
+      hints:['Ang panghihikayat ay may layuning makakuha ng resulta o kilos mula sa kausap.','Ihambing ito sa ikalawang tanong.'],
+      explain:'Mali ang pahayag. Transaksyunal ang panghihikayat, hindi interaksyunal.' },
+
+    // Open-ended question: "keywords" are words that count as a good answer (any one is enough).
+    // After the hints run out, Verity shows the sample answer instead.
+    { type:'quiz',
+      q:'Magbigay ng isang halimbawa ng transaksyunal na pagsasalita.',
+      keywords:['panuto','direksiyon','direksyon','ulat','balita','anunsyo','patalastas','impormasyon','datos','tanong','hikayat','paliwanag','talumpati','interbyu','panawagan'],
+      hints:['Isipin ang pagsasalita na naghahatid ng impormasyon o panuto.','Halimbawa: pagbibigay ng direksiyon o pag-uulat sa klase. Subukan ulit.'],
+      explain:'Mga halimbawa ng transaksyunal: pagbibigay ng panuto at direksiyon, pag-uulat, pagtatanong para sa datos, at panghihikayat.',
+      say:'Ngayon, isulat mo ang sagot sa sarili mong salita.' },
+
+    { type:'quiz',
+      q:'Magbigay ng isang halimbawa ng interaksyunal na pagsasalita.',
+      keywords:['bati','pakikiramay','kaibigan','pakikisalamuha','pakilala','kumusta','kamusta','damdamin','salamat','paalam','kwentuhan','kuwentuhan','opinyon','magandang','biro','pakikipag-usap','pangungumusta'],
+      hints:['Isipin ang pagsasalita na nagpapanatili ng ugnayan sa kapwa.','Halimbawa: pagbati sa kaklase o pakikiramay. Subukan ulit.'],
+      explain:'Mga halimbawa ng interaksyunal: pagbati, pagpapakilala, pakikiramay, at pagpapahayag ng damdamin at opinyon.' },
+
+    { type:'lesson', c:'#5b9b34', title:'Kongklusyon',
+      text:'Ang mahahalagang punto:',
+      bullets:['Dalawa ang layunin ng pagtuturo ng pagsasalita ayon kay Badayos (2008).',
+               'Interaksyunal: pakikitungo sa kapwa at pagpapahayag ng damdamin at opinyon.',
+               'Transaksyunal: paghahatid ng mensahe, pagbibigay ng panuto, pagtatanong nang may layunin, at panghihikayat.',
+               'Mahalagang malaman ang layunin bago magsalita upang maging malinaw, angkop, at epektibo ang mensahe.',
+               'Magagamit ito sa pagbati, pag-uulat, pagbibigay ng direksiyon, pakikipanayam, at talumpati.'],
+      say:'Ngayon alam mo na kung bakit ka nagsasalita.' },
+
+    { type:'lesson', c:'#7a7a7a', title:'Mga Sanggunian',
+      text:'',
+      bullets:['Kasanayan sa Pagsasalita, FIL3_G9 Lithium, 1st Quarter (aralin sa Moodle ng PSHS-ZRC)'] },
+
+    { type:'end',
+      title:{ en:'Class dismissed', tl:'Tapos na ang klase' },
+      sub:{ en:'You got {score} of {total} on the first try. Press R to retake the quiz.',
+            tl:'Nakakuha ka ng {score} sa {total} sa unang sagot. Pindutin ang R para ulitin ang pagsusulit.' } }
+  ]
+};
+</script>
+<script>
+// Built-in Verity picture (embedded, so no extra file is needed)
+if (!Object.keys(CONFIG.teacherImages || {}).length)
+  CONFIG.teacherImages = { happy:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGYktHRAD/AP8A/6C9p5MAAAWZSURBVHja7Z29k9xEEMVby25AwK4JCfhKTAQUWEQHZZNSJKQbOQMyAnKOP4EMIiI7psom9lVhsr0rV+HIkXFCyHnPVQRaViTsWZJHX6OZ6e6Z98v2dKvp1nvqGUmj2YwiZrtZlC72s8yLjDsXX0SRmCuhxxKDMVQmwCV4N+Uvy3z3BXcUY1FjAJmit6OlOogPUpvwTaQbQWRw2kU3URI9XuXF29xxNBFlgBiFNyGpKogIJBXh65Qny3z3KXcU7AZIU/zncFcDtsZTF74JlxGCN3pxNr9e7rMTjmSlw2GCoA3irB9GSCMEawjijyOUCbw3AuHtWcyKt17+kP702YZXA0B8N/isBt52DPHd4ssEXnYK8f3gwwTOdwjx/eLaBE53BvHD4NIEznYE8cPiygROdgLxeXBhgsk7gPi8TDXBpC9DfBlMMYH1FyG+LGxNMLP50tPN/G/uhIEbrAyQUXaFO3BQx7Yijy4bKP2yGdsVjPpniK+DMSYY3AU8O6P3uRMD7hlsgP1+8YA7WDCMMZV6UKlA6dfJkK7A6ioAxEOvQ3D266avCnRWAIivn3JDq67t6AIi54IW513bWw2Asz8etpv5vbZtqABJkN1o22I0AM7++GgbC6ACJELbWAAGSJwXrhFR/uOmeV8AFSBxagbA2R8//5zRm9XPqACJUewXj6ufYYDEuTQAyn+aXI4ItRtgmRdERPTGa0QP7yy8tkFEtN34aSMUh6sB9V3AMi9qwjz5qy6Uy3a6PmtFvQFC8Nvp3vj3GEyQEekt/30CuCrTodoJSTRdALDjcNLDAD3EUOa7iNoAsYvngqgNAPqBARJnpvUKYAjvXuWOQD5RV4Dfb0+/PNN4iTcitzJqA4B+VBvgyb05dwjqK4RqA1x5pf2tJ5fCaBe5C9UGIDKL40OwUO2EJov5KgD0o74CgGnAAIkDAyQODJA4MEDiwACJw38rjaKdcqUiJ/b7ADaTNqQcvAO37uzp6+//VZkHqwFcztgJeTC1xm2CrQs4WrudrmUS5defXqJPrtkPc7463tHtu3HfKGWrAJiv9xyuKrDMi2zG9bv1QAa4DEwcGCBxYIDEgQGY4b4MnBERlSU9SC3x1Km9HLr6qPiAOyDAA2sXkHoVkJA/xgCJc2mAkugbjgAknAWp5V29+XdpgFVe/MB8TJJBkulFdAGSDkhq1AxQUnnOFUgqJuDOs3Ox6FW+e5UzOO6Dk2J+IrqAKhIPUsx5GR8Fc08TI5o+X+D+rTm99870J91H64L+eDRtH1LENz36F2sAIqK7J3tafzt8rl2IAz3GmFKEr8Q+2AA/E9FN7oArgXdu5zjQEmPqideodWuNlFIFGkmY4kQ8w2I1ai1uENjFdrOgj6/V8+CYW3i0Ll5od7tZqBOfqOfHoyVWgUZippijac9h3HYGuDidf1eW2TF3An28fqOgp8/M22ynhn/25Y7un5r9r0H0A32TfqP8+Xgf3YIm0atMNsD/yaszQRttZ/b684x+PBbxqqQzhkz5T84AKeHMAEQwgTaGvvAz6l4pTKCDMW97qboPANwz+mkJqoBsxr7rafW4DCaQic2LvtbPS2ECWdi+5Y0xQARMmco3acYEqoAMpqzxMHnKDEzAy9QFPpysDgIT8OBidRdny8PABGFxtbSP0/WBYIIwuFzXyfkCUTCBX1wv6uVlhTCYwA8+VnTztkQcTOAWX8v5ebsRhPUH3VBSee7zWAYRCdXAjhAnUbCzFCYYR6gKGrRMwwTDCNl9svTTMIIZjnET20ANJqjDNWhmH6mnbgTuqyV2AxxIzQjcwh8QMyFkmRdZlpXH3HGEyFOK+ESCKkCT2CqCJNGriAyqinYjSBX+gOjgmmgxg3TRq6gJtIk0M2gSvYrKoE2ENoRWwZtEkUQXU40Ri9Bt/AeLkxfdLapDEAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNi0xMC0yNlQxMTo1MzoyMyswMDowMDWTzEUAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjYtMTAtMjZUMTE6NTM6MjMrMDA6MDBEznT5AAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI2LTEwLTI2VDExOjUzOjIzKzAwOjAwE9tVJgAAAABJRU5ErkJggg==' };
+</script>
+
+<style>
+:root{
+  --grass:#5b9b34; --grass-d:#477a28; --dirt:#86613f;
+  --panel:#c6c6c6; --ink:#3b3b3b; --slot:#8b8b8b; --w:64px;
+  --px:'Press Start 2P',ui-monospace,Consolas,monospace;
+  --body:'VT323',ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:linear-gradient(#5f8fe0,#a7c9ff 75%);font-family:var(--body);font-size:clamp(20px,2.5vw,30px);line-height:1.25;color:var(--ink)}
+
+.cloud{position:fixed;left:-320px;width:72px;height:24px;background:#fff;opacity:.85;
+  box-shadow:24px -24px #fff,48px -24px #fff,96px 24px #fff,72px 24px #fff,120px 24px #fff;
+  animation:drift var(--t) linear infinite;animation-delay:var(--d)}
+@keyframes drift{to{transform:translateX(calc(100vw + 640px))}}
+.sun{position:fixed;top:8vh;right:18vw;width:60px;height:60px;background:#fff7a8;box-shadow:0 0 0 8px rgba(255,247,168,.4),0 0 0 20px rgba(255,247,168,.2)}
+.hills{position:fixed;left:0;right:0;bottom:19vh;height:17vh;background:#4f9a55;
+  clip-path:polygon(0 70%,8% 70%,8% 40%,20% 40%,20% 60%,33% 60%,33% 25%,46% 25%,46% 55%,60% 55%,60% 35%,74% 35%,74% 65%,88% 65%,88% 30%,100% 30%,100% 100%,0 100%)}
+.hills.far{height:24vh;background:#8fc08a;
+  clip-path:polygon(0 50%,12% 50%,12% 20%,28% 20%,28% 45%,42% 45%,42% 10%,58% 10%,58% 40%,72% 40%,72% 18%,90% 18%,90% 50%,100% 50%,100% 100%,0 100%)}
+.tree{position:fixed;bottom:calc(19vh - 6px);width:20px;height:64px;background:#6b4a2e;box-shadow:inset -5px 0 rgba(0,0,0,.25);transform:scale(var(--s,1));transform-origin:bottom center}
+.tree::before{content:'';position:absolute;left:-32px;top:-46px;width:84px;height:60px;
+  background:conic-gradient(rgba(0,0,0,.15) 25%,transparent 0 50%,rgba(0,0,0,.15) 0 75%,transparent 0) 0 0/12px 12px,#3c8c34;box-shadow:inset -6px -6px rgba(0,0,0,.2)}
+.mob{position:fixed;bottom:calc(19vh - 4px);left:-100px;width:44px;height:26px;background:var(--b);animation:roam var(--t) linear infinite;animation-delay:var(--d)}
+.mob::before{content:'';position:absolute;right:-18px;top:-8px;width:22px;height:22px;background:var(--h,var(--b));box-shadow:inset -4px -4px rgba(0,0,0,.18)}
+.mob::after{content:'';position:absolute;left:4px;bottom:-10px;width:8px;height:12px;background:var(--l);box-shadow:26px 0 var(--l);animation:legs .5s steps(1) infinite}
+.pig{--b:#f2a8b0;--l:#d98a95}
+.cow{--b:#5a3d28;--h:#6b4a2e;--l:#3b281a;background:linear-gradient(90deg,#5a3d28 25%,#f1f1f1 25% 42%,#5a3d28 42% 68%,#f1f1f1 68% 80%,#5a3d28 80%)}
+.mob.rev{left:auto;right:-100px;transform:scaleX(-1);animation-name:roam-l}
+@keyframes roam{to{transform:translateX(calc(100vw + 220px))}}
+@keyframes roam-l{from{transform:scaleX(-1)}to{transform:scaleX(-1) translateX(calc(100vw + 220px))}}
+@keyframes legs{50%{transform:translateX(3px)}}
+.flowers{position:fixed;left:3vw;bottom:19vh;width:10px;height:10px;background:#e03a3a;box-shadow:14vw 0 #f5d142,29vw 0 #e03a3a,43vw 0 #fff,57vw 0 #f5d142,71vw 0 #e03a3a,86vw 0 #6aa8ff,94vw 0 #f5d142}
+.ores{position:fixed;left:4vw;bottom:8vh;width:14px;height:14px;background:#1c1c1c;
+  box-shadow:5vw 22px #1c1c1c,14vw -18px #d8af93,22vw 12px #d8af93,29vw -14px #1c1c1c,68vw 10px #e03030,76vw -16px #d8af93,85vw 18px #1c1c1c,93vw -12px #e03030}
+.dia{position:fixed;left:9vw;bottom:5vh;width:14px;height:14px;background:#4de3d6;box-shadow:80vw 14px #4de3d6,36vw 30px #4de3d6;animation:tw 2.4s steps(1) infinite}
+@keyframes tw{50%{opacity:.35}}
+.ground{position:fixed;left:0;right:0;bottom:0;height:19vh;
+  background:linear-gradient(var(--grass) 0 26%,var(--grass-d) 26% 33%,transparent 33%),
+  conic-gradient(rgba(0,0,0,.08) 25%,transparent 0 50%,rgba(0,0,0,.08) 0 75%,transparent 0) 0 0/32px 32px,var(--dirt)}
+
+.hud{position:fixed;top:14px;font-family:var(--px);font-size:11px;color:#fff;text-shadow:2px 2px #3a3a3a;z-index:5;background:none;border:0}
+.hud.l{left:16px}.hud.r{right:16px}.hud.l2{left:16px;top:38px;cursor:pointer}
+
+.stage{position:fixed;inset:0 0 19vh 0;display:grid;place-items:center;padding:60px 4vw 10vh}
+.slide{display:none;width:min(1000px,100%);max-height:100%;overflow:auto}
+.slide.on{display:block;animation:in .25s steps(4)}
+@keyframes in{from{transform:translateY(14px);opacity:0}}
+
+.panel{background:var(--panel);border:4px solid;border-color:#fff #555 #555 #fff;box-shadow:0 0 0 4px #000;padding:3vh 3vw;margin:4px}
+h1,h2,h3{font-family:var(--px);font-weight:400;line-height:1.5}
+h1{font-size:clamp(20px,4vw,46px);color:#fff;text-shadow:4px 4px #3a3a3a}
+h2{font-size:clamp(14px,2.3vw,26px);margin-bottom:2vh;color:#2a2a2a}
+h3{font-size:clamp(10px,1.4vw,15px);margin-bottom:1.2vh}
+.sub{color:#fff;text-shadow:2px 2px #3a3a3a;font-size:clamp(22px,3vw,34px);margin:2vh auto 0;max-width:30ch}
+.title{text-align:center}
+.title .avatar{margin:0 auto 3vh}
+
+ul.pts{list-style:none;margin-top:1.6vh}
+ul.pts li{display:flex;gap:14px;align-items:center;margin:1.2vh 0}
+ul.pts li::before{content:'';width:20px;height:20px;flex:none;background:var(--c);box-shadow:inset -4px -4px rgba(0,0,0,.28),inset 4px 4px rgba(255,255,255,.22),0 0 0 2px #000}
+
+/* Verity */
+.avatar{display:grid;grid-template-columns:repeat(8,1fr);flex:none;box-shadow:0 0 0 4px #000}
+.avatar i{display:block}
+.avatar.pic{display:block;box-shadow:none}
+.avatar.pic img{display:block;width:100%;height:100%;object-fit:contain}
+.teach{display:flex;gap:18px;align-items:flex-end;margin-top:2.4vh}
+.bubble{position:relative;flex:1;background:#fff;border:4px solid #000;padding:10px 16px;color:#222}
+.bubble::before{content:'';position:absolute;left:-11px;bottom:16px;width:14px;height:14px;background:#fff;border-left:4px solid #000;border-bottom:4px solid #000;transform:rotate(45deg)}
+.bubble b{font-weight:400;color:#a02a2a}
+
+.tx .b{visibility:hidden}
+.bubble{cursor:pointer}
+.bubble.done::after{content:'▼';position:absolute;right:10px;bottom:4px;font-size:.6em;color:#a02a2a;animation:bl .8s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.avatar.talk{animation:talk .24s steps(1) infinite}
+@keyframes talk{50%{transform:translateY(-4px)}}
+.hud.l3{left:16px;top:62px;cursor:pointer}
+
+#score{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:none;gap:10px;z-index:5;font-family:var(--px);font-size:11px}
+#score.on{display:flex}
+#score .tm{background:#222;color:#fff;border:3px solid #000;padding:6px 10px;opacity:.75;white-space:nowrap}
+#score .tm.turn{opacity:1;outline:3px solid #ffe14d;background:#3a3a3a}
+.match{display:grid;gap:10px;margin-bottom:2vh}
+.mrow{display:flex;gap:12px;align-items:center;justify-content:space-between;background:#a9a9a9;border:3px solid;border-color:#555 #fff #fff #555;padding:6px 10px}
+.mrow select{font:inherit;padding:4px 8px;background:#000;color:#fff;border:3px solid;border-color:#555 #ddd #ddd #555}
+.mrow.right{background:#8fcf6a}.mrow.wrong{background:#e08a8a}
+.avatar[title]{cursor:pointer}
+
+.crow{display:flex;gap:14px;align-items:center;margin:.9vh 0}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));column-gap:2.5vw}
+.keys{display:flex;gap:6px;flex:none;min-width:7.5em}
+kbd{font-family:var(--px);font-size:.5em;color:#fff;background:#6f6f6f;border:3px solid;border-color:#bbb #333 #333 #bbb;box-shadow:0 0 0 3px #000;padding:6px 9px;min-width:2.4em;text-align:center;text-shadow:2px 2px #333}
+
+/* Scrolling world (marquee) and the walking player */
+.layer{position:fixed;left:-60px;bottom:19vh;width:300vw;height:0;display:flex;animation:scroll var(--t) linear infinite}
+.cp{position:relative;flex:none;width:100vw;height:0}
+@keyframes scroll{to{transform:translateX(-33.3333%)}}
+.hl{position:absolute;left:0;right:0;bottom:0;height:17vh;background:#4f9a55;
+  clip-path:polygon(0 70%,8% 70%,8% 40%,20% 40%,20% 60%,33% 60%,33% 25%,46% 25%,46% 55%,60% 55%,60% 35%,74% 35%,74% 65%,88% 65%,88% 70%,100% 70%,100% 100%,0 100%)}
+.hl.far{height:24vh;background:#8fc08a;
+  clip-path:polygon(0 50%,12% 50%,12% 20%,28% 20%,28% 45%,42% 45%,42% 10%,58% 10%,58% 40%,72% 40%,72% 18%,90% 18%,90% 50%,100% 50%,100% 100%,0 100%)}
+.layer .tree{position:absolute;bottom:-6px}
+.layer .flowers{position:absolute;bottom:0}
+.ground{animation:gscroll var(--gt,1s) linear infinite}
+@keyframes gscroll{to{background-position:0 0,-32px 0,0 0}}
+#player{position:fixed;left:22vw;bottom:calc(19vh - 6px);animation:pbob .5s steps(1) infinite}
+@keyframes pbob{50%{transform:translateY(-2px)}}
+#player .pt{position:absolute}
+#player .leg{transform-origin:50% 0;animation:legA .5s steps(2) infinite alternate}
+#player .leg.b{animation-name:legB}
+@keyframes legA{from{transform:rotate(-28deg)}to{transform:rotate(28deg)}}
+@keyframes legB{from{transform:rotate(28deg)}to{transform:rotate(-28deg)}}
+.calm .layer,.calm .ground,.calm #player,.calm #player .leg,.calm .cloud,.calm .mob,.calm .mob::after,.calm .dia{animation:none}
+.calm .cloud,.calm .mob,.calm .mob.rev{left:var(--x);right:auto}
+
+/* Quiz */
+.board{background:#2f4a3a;color:#fff;border:6px solid #8a6a3c;box-shadow:0 0 0 3px #000;padding:2.2vh 2vw;margin-bottom:2vh;font-size:1.15em}
+.opts{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.opt,.send{font:inherit;color:#fff;text-shadow:2px 2px #333;text-align:left;cursor:pointer;background:#6f6f6f;
+  border:3px solid;border-color:#bbb #333 #333 #bbb;box-shadow:0 0 0 3px #000;padding:8px 14px;display:flex;gap:12px}
+.opt b{font-family:var(--px);font-weight:400;font-size:.55em;align-self:center;opacity:.8}
+.opt:hover:not(:disabled),.send:hover:not(:disabled){background:#7d86c9}
+.opt:disabled,.send:disabled{cursor:default}
+.open{display:flex;gap:12px}
+.ans{flex:1;min-width:0;font:inherit;color:#fff;background:#000;padding:8px 12px;border:3px solid;border-color:#373737 #fff #fff #373737;box-shadow:0 0 0 3px #000}
+.ans:disabled{opacity:.7}
+.opt.wrong{background:#a02a2a;opacity:.75}
+.opt.right{background:var(--grass)}
+
+/* Hotbar */
+.hotbar{position:fixed;left:50%;bottom:3.5vh;transform:translateX(-50%);display:flex;padding:4px;background:#222;border:4px solid #000;z-index:5}
+.slot{width:var(--w);aspect-ratio:1;background:var(--slot);border:3px solid;border-color:#373737 #fff #fff #373737;position:relative;display:grid;place-items:center;cursor:pointer}
+.slot .blk{width:56%;height:56%;background:var(--c);box-shadow:inset -4px -4px rgba(0,0,0,.28),inset 4px 4px rgba(255,255,255,.22)}
+.slot span{position:absolute;right:3px;bottom:2px;font-family:var(--px);font-size:9px;color:#fff;text-shadow:1px 1px #000}
+.slot.sel{outline:5px solid #fff;outline-offset:-1px;box-shadow:0 0 0 4px #000;z-index:1}
+.name{position:fixed;left:0;right:0;bottom:calc(3.5vh + var(--w) + 30px);text-align:center;font-family:var(--px);font-size:13px;color:#fff;text-shadow:2px 2px #3a3a3a;z-index:5;pointer-events:none;opacity:0}
+.name.show{animation:nm 2.6s forwards}
+@keyframes nm{0%,70%{opacity:1}100%{opacity:0}}
+
+:focus-visible{outline:4px solid #ffe14d;outline-offset:2px}
+.calm .slide.on,.calm .name.show,.calm .avatar.talk,.calm .bubble.done::after,.calm .opt.wrong,.calm .opt.right,.calm .avatar.pic img.sw{animation:none}
+.calm .name.show{opacity:1}
+.calm .slot,.calm .opt,.calm .send,.calm #score .tm{transition:none}
+
+/* Smooth, springy interactions */
+.slide.on{animation:in .5s cubic-bezier(.16,1,.3,1)}
+@keyframes in{from{opacity:0;transform:translateX(var(--dx,0px)) translateY(10px) scale(.985)}}
+.slot{transition:transform .28s cubic-bezier(.34,1.56,.64,1)}
+.slot:hover{transform:translateY(-3px)}
+.slot.sel{transform:translateY(-6px) scale(1.1)}
+.slot .blk{transition:background .5s ease}
+.opt,.send{transition:background .18s ease,transform .22s cubic-bezier(.34,1.56,.64,1),opacity .3s}
+.opt:hover:not(:disabled),.send:hover:not(:disabled){transform:translateY(-2px)}
+.opt:active:not(:disabled),.send:active:not(:disabled){transform:translateY(1px) scale(.99)}
+.opt.wrong{animation:shake .4s ease}
+.opt.right{animation:pop .45s cubic-bezier(.34,1.56,.64,1)}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@keyframes pop{40%{transform:scale(1.04)}}
+#score .tm{transition:opacity .3s,background .3s,outline-color .3s,transform .3s cubic-bezier(.34,1.56,.64,1)}
+#score .tm.turn{transform:translateY(2px) scale(1.06)}
+.avatar.pic img.sw{animation:swap .45s cubic-bezier(.34,1.56,.64,1)}
+@keyframes swap{from{opacity:.2;transform:scale(.7) rotate(-8deg)}}
+/* Mouse parallax (the offsets are lerped in JS) */
+.layer.far{translate:calc(var(--px,0) * -10px) 0}
+.layer.mid{translate:calc(var(--px,0) * -18px) 0}
+.layer.fg{translate:calc(var(--px,0) * -30px) 0}
+#player{translate:calc(var(--px,0) * 8px) 0}
+</style>
+</head>
+<body>
+<div class="sun"></div>
+<div class="cloud" style="top:9vh;--x:8vw;--t:110s;--d:-30s"></div>
+<div class="cloud" style="top:20vh;--x:70vw;--t:150s;--d:-110s"></div>
+<div class="cloud" style="top:5vh;--x:45vw;--t:90s;--d:-70s"></div>
+<div id="world"></div>
+<div class="mob pig" style="--x:30vw;--t:70s;--d:-20s"></div>
+<div class="mob cow rev" style="--x:60vw;--t:95s;--d:-50s"></div>
+<div class="ground"></div>
+<div class="ores"></div>
+<div id="player" aria-hidden="true"></div>
+<div class="dia"></div>
+<div class="hud l" id="hint">← → to move</div>
+<button class="hud l2" id="mus">♪ Music: starts on key press (M)</button>
+<button class="hud l3" id="lang"></button>
+<div id="score" aria-live="polite"></div>
+<div class="hud r" id="count"></div>
+<main class="stage" id="stage"></main>
+<div class="name" id="name"></div>
+<nav class="hotbar" id="hotbar" aria-label="Slides"></nav>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let LANG = new URLSearchParams(location.search).get('lang') || CONFIG.lang;
+  if (!CONFIG.languages[LANG]) LANG = CONFIG.lang;
+  document.documentElement.lang = LANG;
+  const tr = x => (x && typeof x === 'object' && !Array.isArray(x)) ? (x[LANG] ?? x[CONFIG.lang] ?? Object.values(x)[0]) : x;
+  const ui = k => (CONFIG.ui[LANG] && CONFIG.ui[LANG][k]) ?? CONFIG.ui.en[k];
+  const DECK = CONFIG.deck, T = tr(CONFIG.teacher);
+
+  /* ---------- Audio ---------- */
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const MEL  = [64,0,67,0,69,0,67,0, 62,0,64,0,67,0,0,0, 60,0,64,0,67,0,72,0, 69,0,67,0,64,0,0,0];
+  const BASS = [48,0,0,0,0,0,0,0, 43,0,0,0,0,0,0,0, 45,0,0,0,0,0,0,0, 41,0,0,0,0,0,0,0];
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  const Music = {
+    on:true, started:false, step:0,
+    ctx(){ return this.c || (this.c = new AC()); },
+    tone(f, t, d, type, v){
+      const c = this.ctx(), o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      o.connect(g); g.connect(this.master); o.start(t); o.stop(t + d + .05);
+    },
+    start(){
+      if (this.started) return; this.started = true;
+      const c = this.ctx(); this.master = c.createGain(); this.master.gain.value = .5; this.master.connect(c.destination);
+      if (CONFIG.musicUrl){
+        const el = this.el = new Audio(CONFIG.musicUrl); el.loop = true; el.volume = .8;
+        const fallback = () => { this.el = null; this.synth(); };
+        el.addEventListener('error', fallback, {once:true});
+        el.play().catch(e => { if (e.name !== 'NotAllowedError') fallback(); });
+      } else this.synth();
+      this.label();
+    },
+    synth(){
+      if (this.synthOn) return; this.synthOn = true;
+      const c = this.ctx();
+      {
+        this.next = c.currentTime + .1;
+        setInterval(() => {
+          while (this.next < c.currentTime + .3){
+            const k = this.step % MEL.length;
+            if (MEL[k]) this.tone(hz(MEL[k]), this.next, 1.4, 'triangle', .16);
+            if (BASS[k]) this.tone(hz(BASS[k]), this.next, 2.2, 'sine', .2);
+            this.next += .45; this.step++;
+          }
+        }, 50);
+      }
+      this.label();
+    },
+    toggle(){
+      this.on = !this.on;
+      this.master.gain.setTargetAtTime(this.on ? .5 : 0, this.ctx().currentTime, .05);
+      if (this.el) this.on ? this.el.play() : this.el.pause();
+      this.label();
+    },
+    label(){ $('#mus').textContent = ui(!this.started ? 'musicStart' : this.on ? 'musicOn' : 'musicOff'); },
+    blip(){
+      if (!this.started || !this.on) return;
+      this.tone(380 + Math.random() * 160, this.ctx().currentTime, .05, 'square', .035);
+    },
+    sfx(ok){
+      if (!this.started || !this.on) return;
+      const t = this.ctx().currentTime;
+      if (ok){ this.tone(660, t, .25, 'square', .08); this.tone(880, t + .12, .35, 'square', .08); }
+      else   { this.tone(150, t, .4, 'sawtooth', .1); this.tone(110, t + .15, .4, 'sawtooth', .1); }
+    }
+  };
+
+  /* ---------- Verity's face (8x8 pixels) ---------- */
+  const COL = {H:'#4a3222', S:'#c68c5a', G:'#1b1b1b', M:'#7a3b2e'};
+  const FACE = ['HHHHHHHH','HHHHHHHH','HSSSSSSH','SGGSSGGS','SSSSSSSS','','','SSSSSSSS'];
+  const MOUTH = {
+    happy:['SMSSSSMS','SSMMMMSS'], sad:['SSMMMMSS','SMSSSSMS'], neutral:['SSSSSSSS','SSMMMMSS']
+  };
+  function pixels(a){
+    a.className = 'avatar'; a.textContent = '';
+    for (let n = 0; n < 64; n++) a.appendChild(document.createElement('i'));
+    a.mood = m => {
+      const rows = FACE.slice(); rows[5] = MOUTH[m][0]; rows[6] = MOUTH[m][1];
+      [...a.children].forEach((p, n) => p.style.background = COL[rows[n >> 3][n & 7]]);
+    };
+  }
+  const SPRITES = []; let lastSprite = null;
+  (CONFIG.sprites || []).forEach(u => { const m = new Image(); m.onload = () => SPRITES.push(u); m.src = u; });
+  function nextSprite(ball){
+    const pool = (CONFIG.useBall === false ? [] : [ball]).concat(SPRITES);
+    if (!pool.length) return ball;
+    let c; do { c = pool[Math.random() * pool.length | 0]; } while (pool.length > 1 && c === lastSprite);
+    return (lastSprite = c);
+  }
+  function avatar(px){
+    const a = document.createElement('div');
+    a.style.width = a.style.height = px + 'px';
+    const imgs = CONFIG.teacherImages || {}, first = imgs.happy || imgs.neutral || imgs.sad;
+    if (!first){ pixels(a); a.mood('neutral'); return a; }
+    a.className = 'avatar pic';
+    const im = document.createElement('img'); im.alt = ''; a.appendChild(im);
+    im.onerror = () => { pixels(a); a.mood(a.cur || 'neutral'); };
+    a.mood = m => { a.cur = m; im.src = nextSprite(imgs[m] || imgs.happy || first); im.classList.remove('sw'); void im.offsetWidth; im.classList.add('sw'); };
+    a.mood('neutral'); return a;
+  }
+  const SPEED = CONFIG.typeSpeed ?? 35;
+  function speak(s, text, mood, instant){
+    clearTimeout(s.tm);
+    const box = s.bub || s.tx, a = s.tx.querySelector('.a'), b = s.tx.querySelector('.b');
+    s.line = {text, mood}; s.av.mood(mood || 'neutral');
+    box.classList.remove('done');
+    const fin = () => {
+      clearTimeout(s.tm); a.textContent = text; b.textContent = '';
+      box.classList.add('done'); s.av.classList.remove('talk'); s.typing = false;
+    };
+    s.skip = fin;
+    if (instant || !SPEED) return fin();
+    let n = 0; s.typing = true; s.av.classList.add('talk');
+    const step = () => {
+      n++; a.textContent = text.slice(0, n); b.textContent = text.slice(n);
+      const ch = text[n - 1], nx = text[n];
+      if (ch !== ' ') Music.blip();
+      if (n >= text.length) return fin();
+      const gap = (!nx || nx === ' ') ? (/[.!?…]/.test(ch) ? 280 : /[,;:]/.test(ch) ? 140 : 0) : 0;
+      s.tm = setTimeout(step, SPEED + gap);
+    };
+    step();
+  }
+  // Types the slide's current line the first time it is shown, then shows it instantly
+  function enter(s){
+    s.enter = () => { const L = s.line; speak(s, L.text, L.mood, s.seen); s.seen = true; };
+  }
+  function teacher(s, text){
+    const row = document.createElement('div'); row.className = 'teach';
+    s.av = avatar(72);
+    s.bub = document.createElement('div'); s.bub.className = 'bubble';
+    s.bub.innerHTML = '<b>' + esc(T) + ':</b> <span class="tx"><span class="a"></span><span class="b"></span></span>';
+    s.tx = s.bub.querySelector('.tx');
+    s.bub.addEventListener('click', () => { if (s.typing) s.skip(); });
+    s.av.addEventListener('click', () => { if (s.reveal) s.reveal(); });
+    row.append(s.av, s.bub); s.querySelector('.panel').appendChild(row);
+    s.say = (t, mood) => speak(s, t, mood);
+    s.line = {text: text || ui('learn'), mood: 'neutral'}; enter(s);
+  }
+
+  /* ---------- Build slides ---------- */
+  const stage = $('#stage'), hotbar = $('#hotbar'), nameEl = $('#name'), countEl = $('#count');
+  const total = DECK.filter(d => d.type === 'quiz' && !d.game).length;
+  const picks = [], results = {}, wins = {}, teams = CONFIG.teams || [];
+  let gi = 0;
+  let qn = 0, i = 0;
+  const norm = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const slides = DECK.map((d, k) => {
+    const s = document.createElement('section');
+    s.className = 'slide' + (d.type === 'title' || d.type === 'end' ? ' title' : '');
+    let label = tr(d.title) || ui('question'), color = d.c || '#5cbf4f';
+
+    if (d.type === 'title' || d.type === 'end'){
+      s.av = avatar(144); s.av.mood('happy'); s.appendChild(s.av);
+      s.insertAdjacentHTML('beforeend', '<h1>' + esc(tr(d.title)) + '</h1><p class="sub"><span class="a"></span><span class="b"></span></p>');
+      s.tx = s.querySelector('.sub');
+      s.line = {text: tr(d.sub), mood: 'happy'}; enter(s);
+      if (d.type === 'title') label = ui('classStarts');
+      if (d.type === 'end'){ label = ui('classDismissed'); color = '#f5d142';
+        s.update = () => {
+          const n = Object.values(results).filter(r => r === 'first').length;
+          const t = tr(d.sub).replace('{score}', n).replace('{total}', total);
+          if (t !== s.line.text) s.seen = false;
+          s.line = {text: t, mood: n >= total / 2 ? 'happy' : 'neutral'};
+        };
+      }
+    }
+    else if (d.type === 'lesson'){
+      s.innerHTML = '<div class="panel"><h2>' + esc(tr(d.title)) + '</h2><p>' + esc(tr(d.text) || '') + '</p>' +
+        '<ul class="pts" style="--c:' + color + '">' + (d.bullets || []).map(b => '<li>' + esc(tr(b)) + '</li>').join('') + '</ul></div>';
+      teacher(s, tr(d.say));
+    }
+    else if (d.type === 'quiz'){
+      if (!d.game) qn++;
+      if (d.game){ s.turn = gi++ % Math.max(1, teams.length); s.dataset.game = '1'; }
+      label = d.game ? tr(d.round) : ui('question') + ' ' + qn; color = '#f5d142';
+      const head = d.game ? tr(d.round) + (teams.length ? ' · ' + ui('turn') + ' ' + teams[s.turn] : '') : ui('question') + ' ' + qn + ' ' + ui('of') + ' ' + total;
+      s.innerHTML = '<div class="panel"><h3>' + esc(head) + '</h3><div class="board">' + esc(tr(d.q)) + '</div>' +
+        '<div class="opts">' + (d.options || []).map((o, j) => '<button class="opt"><b>' + (j + 1) + '</b>' + esc(tr(o)) + '</button>').join('') + '</div></div>';
+      if (d.keywords) s.querySelector('.opts').outerHTML = '<div class="open"><input class="ans" type="text" maxlength="140" autocomplete="off" placeholder="' +
+        esc(ui('typeHere')) + '"><button class="send">' + esc(ui('send')) + '</button></div>';
+      teacher(s, tr(d.say) || ui('take'));
+      const btns = [...s.querySelectorAll('button.opt')], inp = s.querySelector('.ans');
+      let wrong = 0, done = false;
+      const finish = (ok, el) => {
+        done = true; if (el) el.classList.add('right');
+        btns.forEach(b => b.disabled = true);
+        if (inp){ inp.disabled = true; s.querySelector('.send').disabled = true; }
+        s.say((d.game ? (ok ? ui('correct') : ui('wrongAns')) + ' ' : '') + (tr(d.explain) || ui('correct')), ok ? 'happy' : 'neutral');
+        if (ok){ Music.sfx(true); Motion.kick(2.2); }
+        const res = ok && wrong === 0 ? 'first' : 'hinted';
+        if (d.game){ if (ok) wins[k] = s.turn; scoreUpdate(); } else results[k] = res;
+        slotColor(k, res === 'first' ? '#5b9b34' : '#e8913a');
+      };
+      const miss = el => {
+        Motion.kick(-1.2); wrong++; if (el){ el.classList.add('wrong'); el.disabled = true; }
+        const hs = d.hints || [];
+        if (d.game){ Music.sfx(false); return finish(false, inp ? null : btns[d.answer]); }
+        if (inp && wrong > hs.length) return finish(false);   // out of hints: show the sample answer
+        const h = hs.length ? ui('hint') + ' ' + tr(hs[Math.min(wrong - 1, hs.length - 1)]) : ui('tryAgain');
+        s.say(ui('notQuite') + ' ' + h, 'sad'); Music.sfx(false);
+      };
+      if (inp){
+        const send = () => {
+          const v = norm(inp.value.trim()); if (!v || done) return;
+          d.keywords.some(w => v.includes(norm(w))) ? finish(true) : miss();
+        };
+        s.querySelector('.send').addEventListener('click', send);
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+        s.focusInput = () => inp.focus();
+        picks[k] = null;
+      } else {
+        const pick = j => {
+          if (done || btns[j].disabled) return;
+          j === d.answer ? finish(true, btns[j]) : miss(btns[j]);
+        };
+        btns.forEach((b, j) => b.addEventListener('click', () => pick(j)));
+        picks[k] = pick;
+      }
+      s.reveal = () => { if (!done) finish(false, inp ? null : btns[d.answer]); };
+      s.av.title = ui('ballTip'); s.av.style.cursor = 'pointer';
+    }
+    else if (d.type === 'match'){
+      s.turn = gi++ % Math.max(1, teams.length); s.dataset.game = '1'; label = tr(d.round); color = '#f5d142';
+      const head = tr(d.round) + (teams.length ? ' · ' + ui('turn') + ' ' + teams[s.turn] : '');
+      const ch = d.choices.map(tr);
+      s.innerHTML = '<div class="panel"><h3>' + esc(head) + '</h3><div class="board">' + esc(tr(d.q)) + '</div><div class="match">' +
+        d.pairs.map(p => '<div class="mrow"><span>' + esc(tr(p[0])) + '</span><select><option value="">—</option>' +
+          ch.map((c, j) => '<option value="' + j + '">' + esc(c) + '</option>').join('') + '</select></div>').join('') +
+        '</div><button class="send mchk">' + esc(ui('send')) + '</button></div>';
+      teacher(s, tr(d.say) || ui('take'));
+      const sels = [...s.querySelectorAll('select')], mbtn = s.querySelector('.mchk'); let done = false;
+      const finish = ok => {
+        done = true; mbtn.disabled = true;
+        sels.forEach((sel, n) => {
+          sel.parentNode.classList.add(sel.value !== '' && +sel.value === d.pairs[n][1] ? 'right' : 'wrong');
+          sel.value = d.pairs[n][1]; sel.disabled = true;
+        });
+        s.say((ok ? ui('correct') : ui('wrongAns')) + ' ' + tr(d.explain), ok ? 'happy' : 'neutral');
+        Music.sfx(ok); Motion.kick(ok ? 2.2 : -1.2); if (ok) wins[k] = s.turn; scoreUpdate(); slotColor(k, ok ? '#5b9b34' : '#e8913a');
+      };
+      mbtn.addEventListener('click', () => {
+        if (!done && sels.every(x => x.value !== '')) finish(sels.every((x, n) => +x.value === d.pairs[n][1]));
+      });
+      s.reveal = () => { if (!done) finish(false); };
+      s.av.title = ui('ballTip'); s.av.style.cursor = 'pointer';
+    }
+    else if (d.type === 'controls'){
+      color = '#4de3d6'; label = tr(d.title);
+      s.innerHTML = '<div class="panel"><h2>' + esc(tr(d.title)) + '</h2><div class="cgrid">' +
+        d.rows.map(r => '<div class="crow"><span class="keys">' + r.keys.map(k => '<kbd>' + esc(k) + '</kbd>').join('') +
+          '</span><span>' + esc(tr(r.text)) + '</span></div>').join('') + '</div></div>';
+      teacher(s, tr(d.say));
+    }
+    s.dataset.t = label; s.dataset.c = color;
+    stage.appendChild(s); return s;
+  });
+
+  const slots = slides.map((s, k) => {
+    const b = document.createElement('div'); b.className = 'slot'; b.title = s.dataset.t;
+    b.innerHTML = '<div class="blk" style="--c:' + s.dataset.c + '"></div><span>' + (k + 1) + '</span>';
+    b.addEventListener('click', () => go(k)); hotbar.appendChild(b); return b;
+  });
+  const slotColor = (k, c) => slots[k].firstChild.style.setProperty('--c', c);
+  const size = () => document.documentElement.style.setProperty('--w', Math.min(64, (innerWidth - 40) / slides.length - 6) + 'px');
+  size(); addEventListener('resize', size);
+
+  function scoreUpdate(){
+    const sb = $('#score'); sb.textContent = '';
+    const cur = slides[i] ? slides[i].turn : undefined;
+    teams.forEach((t, n) => {
+      const d = document.createElement('div'); d.className = 'tm' + (n === cur ? ' turn' : '');
+      d.textContent = t + ': ' + Object.values(wins).filter(v => v === n).length; sb.appendChild(d);
+    });
+  }
+  function go(n){
+    const old = i;
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    if (i !== old){ stage.style.setProperty('--dx', (i > old ? 46 : -46) + 'px'); Motion.kick(i > old ? (i - old > 1 ? 1.8 : 1.2) : -0.6); }
+    slides.forEach((s, k) => s.classList.toggle('on', k === i));
+    slots.forEach((s, k) => s.classList.toggle('sel', k === i));
+    slides.forEach((s, k) => { if (k !== i && s.typing) s.skip(); });
+    if (slides[i].update) slides[i].update();
+    if (slides[i].enter) slides[i].enter();
+    $('#score').classList.toggle('on', teams.length > 0 && (slides[i].dataset.game === '1' || DECK[i].type === 'end'));
+    scoreUpdate();
+    countEl.textContent = (i + 1) + ' / ' + slides.length;
+    nameEl.textContent = slides[i].dataset.t;
+    nameEl.classList.remove('show'); void nameEl.offsetWidth; nameEl.classList.add('show');
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+
+  /* ---------- Controls ---------- */
+  addEventListener('keydown', e => {
+    const k = e.key;
+    if (!Music.started){ Music.start(); if (k === 'm' || k === 'M') return; }
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT'){ if (k === 'Escape') e.target.blur(); return; }
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' '){ e.preventDefault(); go(i + 1); }
+    else if (k === 'ArrowLeft' || k === 'PageUp'){ e.preventDefault(); go(i - 1); }
+    else if (k === 'Home') go(0);
+    else if (k === 'End') go(slides.length - 1);
+    else if (k >= '1' && k <= '9'){ if (picks[i]) picks[i](+k - 1); }
+    else if (k === 'Enter' || k === 'z' || k === 'Z' || k === 'x' || k === 'X'){ const c = slides[i]; if (c.typing) c.skip(); else if (k === 'Enter' && c.focusInput){ e.preventDefault(); c.focusInput(); } }
+    else if (k === 'l' || k === 'L') cycleLang();
+    else if (k === 'm' || k === 'M') Music.toggle();
+    else if (k === 'r' || k === 'R'){ location.hash = '#1'; location.reload(); }
+    else if (k === 'f' || k === 'F') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  addEventListener('pointerdown', () => Music.start(), {once:true});
+  $('#mus').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); if (!Music.started) Music.start(); else Music.toggle(); });
+
+  let x0 = null;
+  addEventListener('touchstart', e => x0 = e.touches[0].clientX, {passive:true});
+  addEventListener('touchend', e => {
+    if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 60) go(i + (dx < 0 ? 1 : -1)); x0 = null;
+  });
+
+  /* ---------- Scrolling world + walking player ---------- */
+  const WALK = 30;   // seconds for the foreground to scroll one screen
+  function pxs(map, pal, px){
+    const w = document.createElement('div'), d = document.createElement('div'), sh = [];
+    w.style.width = map[0].length * px + 'px'; w.style.height = map.length * px + 'px';
+    map.forEach((row, y) => [...row].forEach((c, x) => { if (pal[c]) sh.push(x * px + 'px ' + y * px + 'px 0 ' + pal[c]); }));
+    d.style.cssText = 'width:' + px + 'px;height:' + px + 'px;box-shadow:' + sh.join(',');
+    w.appendChild(d); return w;
+  }
+  function buildWorld(){
+    const layer = (cls, t, inner) => { const c = '<div class="cp">' + inner + '</div>'; return '<div class="layer ' + cls + '" style="--t:' + t + 's">' + c + c + c + '</div>'; };
+    const trees = [[5,1.15],[21,.9],[34,1.05],[52,1.2],[66,.85],[78,1.2],[92,.95]]
+      .map(([x, k]) => '<div class="tree" style="left:' + x + 'vw;--s:' + k + '"></div>').join('');
+    $('#world').innerHTML = layer('far', 180, '<div class="hl far"></div>') + layer('mid', 90, '<div class="hl"></div>') +
+      layer('fg', WALK, trees + '<div class="flowers"></div>');
+    document.documentElement.style.setProperty('--gt', (32 / (innerWidth / WALK)).toFixed(3) + 's');
+  }
+  function buildPlayer(){
+    const u = Math.max(5, Math.min(9, Math.round(innerHeight / 110)));
+    const P = {H:'#4a3222', S:'#c58c62', B:'#2b5fd8', T:'#1fa6b8', P:'#3a3fa0', L:'#7a7a7a'};
+    const body = ['.HHHH.','.HSSSS','.HSSBS','.SSSS.','..TT..','.TTTT.','.TTTT.','.TTTT.','.PPPP.'], leg = ['PP','PP','LL'];
+    const el = $('#player'); el.textContent = '';
+    el.style.width = 6 * u + 'px'; el.style.height = 12 * u + 'px';
+    const add = (map, x, y, cls) => { const w = pxs(map, P, u); w.className = 'pt ' + cls; w.style.left = x * u + 'px'; w.style.top = y * u + 'px'; el.appendChild(w); };
+    add(leg, 1, 9, 'leg a'); add(leg, 3, 9, 'leg b'); add(body, 0, 0, '');
+  }
+  /* ---------- Motion: events change the speed, everything is lerped ---------- */
+  const Motion = (() => {
+    const MIN = .15, MAX = 4, root = document.documentElement;
+    const NAMES = ['scroll','gscroll','pbob','legA','legB','drift','roam','roam-l','legs','tw'];
+    let speed = 1, target = 1, applied = 1, anims = [], last = performance.now(), mx = 0, px = 0;
+    const refresh = () => { anims = document.getAnimations().filter(a => NAMES.includes(a.animationName)); anims.forEach(a => { a.playbackRate = speed; }); };
+    function tick(now){
+      const dt = Math.min(.1, (now - last) / 1000); last = now;
+      target += (1 - target) * (1 - Math.exp(-dt * .6));     // an event's effect fades back to normal speed
+      speed += (target - speed) * (1 - Math.exp(-dt * 4));   // the real speed chases the target smoothly
+      px += (mx - px) * (1 - Math.exp(-dt * 5));             // smoothed mouse parallax
+      root.style.setProperty('--px', px.toFixed(3));
+      if (Math.abs(speed - applied) > .003){ anims.forEach(a => { a.playbackRate = speed; }); applied = speed; }
+      requestAnimationFrame(tick);
+    }
+    addEventListener('pointermove', e => { mx = (e.clientX / innerWidth - .5) * 2; });
+    requestAnimationFrame(tick);
+    return { kick(d){ target = Math.max(MIN, Math.min(MAX, target + d)); }, refresh };
+  })();
+  let rw; addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => { buildWorld(); buildPlayer(); requestAnimationFrame(Motion.refresh); }, 250); });
+
+  function cycleLang(){
+    const ks = Object.keys(CONFIG.languages);
+    if (ks.length < 2) return;
+    location.search = '?lang=' + ks[(ks.indexOf(LANG) + 1) % ks.length];
+  }
+  if (CONFIG.reduceMotion && matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('calm');
+  buildWorld(); buildPlayer(); requestAnimationFrame(Motion.refresh);
+  addEventListener('pointerdown', () => Motion.kick(.5));
+  $('#hint').textContent = ui('move'); Music.label();
+  $('#lang').textContent = ui('lang') + ': ' + CONFIG.languages[LANG] + ' (L)';
+  $('#lang').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.blur(); cycleLang(); });
+
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+})();
+</script>
+</body>
+</html>
