@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account | Secure Portal</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --error: #ef4444;
+            --success: #10b981;
+            --success-hover: #059669;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .register-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+
+        h2 { margin: 0 0 0.5rem 0; font-size: 1.5rem; text-align: center; font-weight: 800; }
+        p.subtitle { color: #64748b; text-align: center; margin-bottom: 2rem; font-size: 0.9rem; }
+
+        .flash-msg {
+            background: #fee2e2;
+            color: var(--error);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            text-align: center;
+            border: 1px solid #fecaca;
+        }
+
+        label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            box-sizing: border-box;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        .form-row > div { flex: 1; }
+
+        /* Full Month Styling */
+        .date-display {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+            display: block;
+        }
+
+        .password-wrapper { position: relative; width: 100%; }
+        #toggle-check { display: none; }
+        
+        .toggle-label {
+            position: absolute;
+            right: 0.75rem;
+            top: 0.75rem;
+            color: var(--primary);
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            user-select: none;
+            z-index: 10;
+        }
+
+        input.pw-field { -webkit-text-security: disc; padding-right: 3.5rem; }
+        #toggle-check:checked ~ input.pw-field { -webkit-text-security: none; }
+        .toggle-label::before { content: "SHOW"; }
+        #toggle-check:checked ~ .toggle-label::before { content: "HIDE"; }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 0.5rem;
+        }
+
+        button[type="submit"]:hover { background: var(--success-hover); }
+        button[type="submit"]:active { transform: scale(0.98); }
+
+        .footer {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        a:hover { text-decoration: underline; }
+
+        span.optional { color: #94a3b8; font-weight: 400; font-size: 0.75rem; }
+
+        #map-canvas {
+            height: 200px;
+            width: 100%;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e2e8f0;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <main class="register-card">
+        <h2>Join us</h2>
+        <p class="subtitle">Create your new account</p>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="flash-msg">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" id="register-form">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Pick a username" autofocus>
+            
+            <label for="password">Password</label>
+            <div class="password-wrapper">
+                <input type="checkbox" id="toggle-check">
+                <input type="text" id="password" name="password" class="pw-field" placeholder="Create a password" autocomplete="new-password">
+                <label for="toggle-check" class="toggle-label"></label>
+            </div>
+
+            <label for="age">Age</label>
+            <input type="number" id="age" name="age" placeholder="Enter your age">
+
+            <label>Pinpoint your location (Exact Address will be fetched)</label>
+            <div id="map-canvas"></div>
+            <input type="hidden" id="latlng_coords" name="location_coords">
+
+            <label for="address">Home Address</label>
+            <input type="text" id="address" name="address" placeholder="Address will appear here..." readonly>
+
+            <div class="form-row">
+                <div>
+                    <label for="phone">Phone <span class="optional">(Optional)</span></label>
+                    <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000">
+                </div>
+                <div>
+                    <label for="birthday">Birthday</label>
+                    <span id="full-date-text" class="date-display">Pick a date...</span>
+                    <input type="date" id="birthday" name="birthday" onchange="formatDateDisplay(this.value)">
+                </div>
+            </div>
+            
+            <button type="submit">Create Account</button>
+        </form>
+
+        <div class="footer">
+            Already have an account? <a href="/login">Sign in</a>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Birthday formatting function
+        function formatDateDisplay(dateStr) {
+            const display = document.getElementById('full-date-text');
+            if (!dateStr) {
+                display.innerText = "Pick a date...";
+                return;
+            }
+            const date = new Date(dateStr);
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            display.innerText = date.toLocaleDateString('en-US', options);
+        }
+
+        const map = L.map('map-canvas').setView([12.6, 122.5], 6);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        let marker = L.marker([12.6, 122.5], {
+            draggable: true
+        }).addTo(map);
+
+        async function fetchExactAddress(lat, lng) {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data && data.display_name) {
+                    document.getElementById("address").value = data.display_name;
+                }
+            } catch (err) {
+                console.error("Geocoding failed:", err);
+                document.getElementById("address").value = "Manual entry required or check connection.";
+            }
+        }
+
+        function updateLocationData(lat, lng) {
+            document.getElementById("latlng_coords").value = lat.toFixed(6) + "," + lng.toFixed(6);
+            fetchExactAddress(lat, lng);
+        }
+
+        marker.on('dragend', function() {
+            const pos = marker.getLatLng();
+            updateLocationData(pos.lat, pos.lng);
+        });
+
+        map.on('click', function(e) {
+            marker.setLatLng(e.latlng);
+            updateLocationData(e.latlng.lat, e.latlng.lng);
+        });
+    </script>
+</body>
+</html>

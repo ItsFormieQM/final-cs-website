@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Secure Portal</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --text-muted: #64748b;
+            --error: #ef4444;
+            --success: #10b981;
+        }
+
+        /* Support for Dark Mode to match your Settings page */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card-bg: #1e293b;
+                --text: #f1f5f9;
+                --border: #334155;
+            }
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            transition: background 0.3s ease;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--border);
+        }
+
+        h2 { margin: 0 0 0.5rem 0; font-size: 1.5rem; text-align: center; font-weight: 800; }
+        p.subtitle { color: var(--text-muted); text-align: center; margin-bottom: 2rem; font-size: 0.9rem; }
+
+        .flash-msg {
+            padding: 0.8rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .flash-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border-color: var(--error);
+        }
+
+        .flash-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        label { 
+            display: block; 
+            font-size: 0.8rem; 
+            font-weight: 600; 
+            margin-bottom: 8px; 
+            color: var(--text-muted);
+        }
+
+        input {
+            width: 100%;
+            padding: 0.8rem;
+            margin-bottom: 1.2rem;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            background: var(--bg);
+            color: var(--text);
+            box-sizing: border-box;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .password-wrapper { position: relative; margin-bottom: 1.2rem; }
+        #toggle-check { display: none; }
+        
+        .toggle-label {
+            position: absolute;
+            right: 0.8rem;
+            top: 0.8rem;
+            color: var(--primary);
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            user-select: none;
+            z-index: 5;
+        }
+
+        input[name="password"] { -webkit-text-security: disc; padding-right: 3.5rem; }
+        #toggle-check:checked ~ input[name="password"] { -webkit-text-security: none; }
+        .toggle-label::before { content: "SHOW"; }
+        #toggle-check:checked ~ .toggle-label::before { content: "HIDE"; }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 0.5rem;
+        }
+
+        button[type="submit"]:hover { 
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        button[type="submit"]:active { transform: translateY(0); }
+
+        .card-footer {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .card-footer a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .card-footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>Welcome back</h2>
+        <p class="subtitle">Please enter your details</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash-msg {% if category == 'success' %}flash-success{% else %}flash-error{% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form id="loginForm" method="POST">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Ex. ItsFormieQM" autofocus>
+            
+            <label for="password">Password</label>
+            <div class="password-wrapper">
+                <input type="checkbox" id="toggle-check">
+                <input type="text" name="password" autocomplete="off" placeholder="Ex. 255 (hidden by default)">
+                <label for="toggle-check" class="toggle-label"></label>
+            </div>
+            
+            <button type="submit">Sign in</button>
+        </form>
+
+        <div class="card-footer">
+            Don't have an account? <a href="/register">Create one here for free!</a>
+        </div>
+    </div>
+
+</body>
+</html>

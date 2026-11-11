@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rewards Shop | Secure Portal</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --accent: #10b981;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card-bg: #1e293b;
+                --text: #f1f5f9;
+                --text-muted: #94a3b8;
+                --border: #334155;
+            }
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            transition: background 0.3s ease;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-stats {
+            background: var(--card-bg);
+            padding: 0.75rem 1.25rem;
+            border-radius: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            font-weight: 700;
+        }
+
+        .points-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .points-amount {
+            color: var(--accent);
+            margin-left: 5px;
+        }
+
+        /* --- Shop Layout --- */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 2rem;
+        }
+
+        .item-card {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .item-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.15);
+        }
+
+        /* --- Sprite Animation & Logic --- */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* Frame Swapping Keyframes */
+        @keyframes sprite-swap {
+            0%, 49.9% {
+                -webkit-mask-image: var(--f1);
+                mask-image: var(--f1);
+                background-image: var(--f1);
+            }
+            50%, 100% {
+                -webkit-mask-image: var(--f2);
+                mask-image: var(--f2);
+                background-image: var(--f2);
+            }
+        }
+
+        .shop-item-container {
+            width: 64px;
+            height: 64px;
+            margin: 1.5rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Unified style for animated items */
+        .shop-item-img, .shop-item-standard {
+            width: 64px;
+            height: 64px;
+            image-rendering: pixelated;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            /* steps(1) is key for pixel art - no fading! */
+            animation: sprite-swap var(--speed) infinite steps(1);
+        }
+
+        /* Shader specific logic */
+        .shop-item-img {
+            background-color: var(--item-color, #ffffff);
+            -webkit-mask-size: contain;
+            -webkit-mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            mask-size: contain;
+            mask-repeat: no-repeat;
+            mask-position: center;
+            transition: filter 0.2s ease;
+        }
+
+        .item-card:hover .shop-item-img {
+            filter: drop-shadow(0 0 12px var(--item-color));
+        }
+
+        /* --- Typography --- */
+        .item-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin: 1rem 0 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .item-price {
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* --- Purchase Button --- */
+        .buy-btn {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .buy-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .buy-btn:active {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+
+        /* --- Footer --- */
+        .footer-nav {
+            margin-top: 4rem;
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0 15px;
+            transition: 0.2s;
+        }
+
+        .footer-nav a:hover {
+            color: var(--primary-hover);
+        }
+
+        /* --- Flash Alerts --- */
+        .flash-msg {
+            padding: 1rem;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 0.75rem;
+            margin-bottom: 2rem;
+            font-weight: 600;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1 style="margin: 0; font-weight: 900;">MARKETPLACE</h1>
+                <p style="color: var(--text-muted); margin: 5px 0 0 0;">Trade your points for rare artifacts</p>
+            </div>
+            <div class="user-stats">
+                <span class="points-label">Balance:</span>
+                <span class="points-amount">{{ user_points }} Pts</span>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="flash-container">
+            {% for message in messages %}
+            <div class="flash-msg">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="shop-grid">
+            {% for item_id, details in shop_items.items() %}
+            {% set use_shader = details.text_color and details.text_color != None %}
+            
+            {# Pull both frames and the speed from the backend dict #}
+            {% set f1 = url_for('static', filename=details.frames[0]) %}
+            {% set f2 = url_for('static', filename=details.frames[1]) %}
+
+            <div class="item-card"
+                style="--f1: url('{{ f1 }}'); 
+                       --f2: url('{{ f2 }}'); 
+                       --speed: {{ details.anim_speed }}s;
+                       {% if use_shader %}--item-color: {{ details.text_color }}; border-color: {{ details.text_color }};{% endif %}">
+
+                <div class="shop-item-container">
+                    {% if use_shader %}
+                    <div class="shop-item-img"></div>
+                    {% else %}
+                    <div class="shop-item-standard"></div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <div class="item-name" style="{% if use_shader %}color: {{ details.text_color }};{% endif %}">
+                        {{ details.name }}
+                    </div>
+
+                    <div class="item-price"
+                        style="{% if use_shader %}color: {{ details.text_color }}; opacity: 0.7;{% endif %}">
+                        {{ details.price }} Points
+                    </div>
+
+                    <form action="/buy/{{ item_id }}" method="POST">
+                        <button type="submit" class="buy-btn"
+                            style="{% if use_shader %}background: {{ details.text_color }};{% endif %}">
+                            Purchase
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="footer-nav">
+            <a href="/">← Return to Profile</a>
+            <span style="color: var(--border);">|</span>
+            <a href="/logout">Logout</a>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Points</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --accent: #10b981;
+            --border: #e2e8f0;
+            --admin: #f59e0b;
+            --games: #06b6d4;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card-bg: #1e293b;
+                --text: #f1f5f9;
+                --text-muted: #94a3b8;
+                --border: #334155;
+            }
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .home-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 550px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        /* --- Stats Header --- */
+        .user-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-align: left;
+            margin-bottom: 2rem;
+        }
+
+        .user-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--games);
+            color: white;
+            border-radius: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .points-pill {
+            background: var(--accent);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        /* --- Action Grid (Math & Daily) --- */
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 2rem;
+        }
+
+        .action-card {
+            background: var(--bg);
+            padding: 1.2rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .action-card h3 {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        /* --- Sprite Animation --- */
+        @keyframes sprite-loop {
+
+            0%,
+            49.9% {
+                background-image: var(--f1);
+            }
+
+            50%,
+            100% {
+                background-image: var(--f2);
+            }
+        }
+
+        .sprite-box {
+            width: 48px;
+            height: 48px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            image-rendering: pixelated;
+            margin: 0 auto 8px;
+        }
+
+        /* --- Inventory --- */
+        .inventory-section {
+            text-align: left;
+            margin-top: 1.5rem;
+        }
+
+        .inventory-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .item-slot {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .item-slot:hover {
+            transform: translateY(-3px);
+        }
+
+        .item-name {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        /* --- Inputs & Buttons --- */
+        .input-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 5px;
+            width: 80%;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .btn {
+            padding: 0.6rem 1rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            text-decoration: none;
+            text-align: center;
+            transition: 0.2s;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.75rem;
+            display: inline-block;
+        }
+
+        .primary-btn {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+        }
+
+        .primary-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .outline-btn {
+            background: transparent;
+            border: 2px solid var(--games);
+            color: var(--games);
+        }
+
+        .outline-btn:hover {
+            background: var(--games);
+            color: white;
+        }
+
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 2rem;
+        }
+
+        .logout-link {
+            color: var(--danger);
+            font-size: 0.85rem;
+            text-decoration: none;
+            margin-top: 5px;
+        }
+
+        .flash-msg {
+            padding: 0.8rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="home-card">
+        <div class="user-header">
+            <div class="user-icon">G</div>
+            <div>
+                <h1 style="margin:0; font-size: 1.5rem;">{{ username }}</h1>
+                <span class="points-pill">G {{ user.points }}</span>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash-msg {{ category }}"> {{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="action-grid">
+            <div class="action-card">
+                <h3>Occasional Bonus</h3>
+                <form action="/claim-daily" method="POST" style="width: 100%;">
+                    <button type="submit" class="btn primary-btn">CLAIM +10</button>
+                </form>
+            </div>
+
+            <div class="action-card">
+                <h3>Math Test</h3>
+                {% if session.get('math_equation') %}
+                <p style="margin: 0 0 10px 0; font-weight: 800;">{{ session['math_equation'] }}</p>
+                <form action="/verify-math" method="POST">
+                    <input type="number" name="guess" class="input-box" required autofocus>
+                    <button type="submit" class="btn primary-btn">CHECK</button>
+                </form>
+                {% else %}
+                <a href="/generate-math" class="btn outline-btn" style="width: 100%;">GET TASK</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="inventory-section">
+            <span class="inventory-title">Items & Equipment</span>
+            <div class="inventory-grid">
+                {% if user.inventory %}
+                {# 1. Create a list of unique item IDs #}
+                {% set unique_items = user.inventory | unique %}
+
+                {% for item_id in unique_items %}
+                {% set item = shop_items[item_id] %}
+                {# 2. Count how many times this specific ID appears in the full inventory #}
+                {% set quantity = user.inventory.count(item_id) %}
+
+                <div class="item-slot" style="position: relative;">
+                    {% if quantity > 1 %}
+                    <span
+                        style="position: absolute; top: 5px; right: 8px; font-size: 0.7rem; font-weight: 900; color: var(--accent); background: rgba(0,0,0,0.6); padding: 2px 5px; border-radius: 4px; z-index: 2;">
+                        x{{ quantity }}
+                    </span>
+                    {% endif %}
+
+                    <div class="sprite-box"
+                        style="--f1: url('/static/{{ item.frames[0] }}'); 
+                               --f2: url('/static/{{ item.frames[1] }}'); 
+                               animation: sprite-loop {{ item.anim_speed }}s infinite steps(1);
+                               {% if item.text_color != 'none' %} filter: drop-shadow(0 0 5px {{ item.text_color }}); {% endif %}">
+                    </div>
+                    <div class="item-name"
+                        style="{% if item.text_color != 'none' %} color: {{ item.text_color }}; {% endif %}">
+                        {{ item.name }}
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+                    No items found.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <a href="/" class="btn outline-btn">Return Home</a>
+            <a href="/shop" class="btn primary-btn">Go to Shop</a>
+            {% if username == 'admin' %}
+            <a href="/admin-dashboard" class="btn" style="background: var(--admin); color: white;">Admin Panel</a>
+            {% endif %}
+            <a href="/logout" class="logout-link">Sign Out</a>
+        </div>
+    </div>
+
+</body>
+
+</html>

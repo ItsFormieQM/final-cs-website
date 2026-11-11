@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | Secure Portal</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --text-muted: #64748b;
+            --error: #ef4444;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card-bg: #1e293b;
+                --text: #f1f5f9;
+                --border: #334155;
+            }
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .settings-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 1.2rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        .form-row > div { flex: 1; }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        .pwd-input {
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            box-sizing: border-box;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .maskable {
+            -webkit-text-security: disc;
+        }
+
+        .maskable:focus,
+        .maskable:hover {
+            -webkit-text-security: none;
+            background: var(--card-bg);
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .date-display {
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+            display: block;
+        }
+
+        .hint {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            display: block;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: inherit;
+            margin-top: 1rem;
+        }
+
+        .save-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .cancel-btn {
+            background: transparent;
+            color: var(--text-muted);
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            margin-top: 1.2rem;
+            font-size: 0.85rem;
+        }
+
+        #map-canvas {
+            height: 180px;
+            width: 100%;
+            border-radius: 0.75rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--border);
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="settings-card">
+        <h2 style="margin: 0 0 1.5rem 0; text-align: center;">Account Settings</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div style="padding: 0.8rem; margin-bottom: 1.5rem; border-radius: 0.75rem; font-size: 0.85rem; font-weight: 600; 
+                    background: {% if category == 'error' %}rgba(239, 68, 68, 0.1){% else %}rgba(79, 70, 229, 0.1){% endif %}; 
+                    color: {% if category == 'error' %}var(--error){% else %}var(--primary){% endif %};
+                    border: 1px solid {% if category == 'error' %}var(--error){% else %}var(--primary){% endif %};">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form action="/settings" method="POST">
+            <div class="form-group"
+                style="background: rgba(79, 70, 229, 0.05); padding: 1rem; border-radius: 0.75rem; border: 1px dashed var(--primary);">
+                <label style="color: var(--primary);">Confirm Current Password</label>
+                <input type="password" name="current_password" class="pwd-input" placeholder="Verify identity to save">
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+            <input type="hidden" name="old_username" value="{{ username }}">
+
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="new_username" class="pwd-input" value="{{ username }}">
+            </div>
+
+            <div class="form-group">
+                <label>New Password (Leave blank to keep current)</label>
+                <input type="text" name="new_password" class="pwd-input maskable" autocomplete="off">
+                <span class="hint">Type a new password here to change it</span>
+            </div>
+
+            <div class="form-group">
+                <label>Update Location Pin</label>
+                <div id="map-canvas"></div>
+                <input type="hidden" id="latlng_coords" name="location_coords" value="{{ user_data.location_coords if user_data.location_coords else '12.6,122.5' }}">
+            </div>
+
+            <div class="form-group">
+                <label>Home Address</label>
+                <input type="text" id="address" name="address" class="pwd-input" value="{{ user_data.address }}">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Age</label>
+                    <input type="number" name="age" class="pwd-input" value="{{ user_data.age }}">
+                </div>
+                <div class="form-group">
+                    <label>Birthday</label>
+                    <span id="full-date-text" class="date-display">Loading date...</span>
+                    <input type="date" id="birthday-picker" name="birthday" class="pwd-input" value="{{ user_data.birthday }}" onchange="formatDateDisplay(this.value)">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" name="phone" class="pwd-input" value="{{ user_data.phone }}">
+            </div>
+
+            <button type="submit" class="btn save-btn">Save Changes</button>
+        </form>
+
+        <a href="/" class="cancel-btn">Back to Dashboard</a>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        function formatDateDisplay(dateStr) {
+            const display = document.getElementById('full-date-text');
+            if (!dateStr) {
+                display.innerText = "Not Provided";
+                return;
+            }
+            const date = new Date(dateStr);
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            display.innerText = date.toLocaleDateString('en-US', options);
+        }
+
+        let initialCoords = [12.6, 122.5]; 
+        const savedCoords = "{{ user_data.location_coords }}";
+        
+        if (savedCoords && savedCoords.includes(',')) {
+            initialCoords = savedCoords.split(',').map(Number);
+        }
+
+        const map = L.map('map-canvas').setView(initialCoords, 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        let marker = L.marker(initialCoords, {
+            draggable: true
+        }).addTo(map);
+
+        async function fetchExactAddress(lat, lng) {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data && data.display_name) {
+                    document.getElementById("address").value = data.display_name;
+                }
+            } catch (err) {
+                console.error("Geocoding failed:", err);
+            }
+        }
+
+        function updateLocationData(lat, lng) {
+            document.getElementById("latlng_coords").value = lat.toFixed(6) + "," + lng.toFixed(6);
+            fetchExactAddress(lat, lng);
+        }
+
+        marker.on('dragend', function() {
+            const pos = marker.getLatLng();
+            updateLocationData(pos.lat, pos.lng);
+        });
+
+        map.on('click', function(e) {
+            marker.setLatLng(e.latlng);
+            updateLocationData(e.latlng.lat, e.latlng.lng);
+        });
+
+        window.onload = function() {
+            formatDateDisplay(document.getElementById('birthday-picker').value);
+        };
+    </script>
+</body>
+</html>

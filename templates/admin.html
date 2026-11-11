@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | User Management</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 2rem 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .admin-container {
+            width: 100%;
+            max-width: 850px;
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; font-weight: 800; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 1rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.95rem;
+        }
+
+        /* --- Pure CSS Toggle Logic --- */
+        .pw-toggle { display: none; } /* Hide the checkbox */
+        
+        .pw-label {
+            cursor: pointer;
+            font-family: 'Fira Code', monospace;
+            background: #f1f5f9;
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.4rem;
+            color: var(--text-muted);
+            display: inline-block;
+            user-select: none;
+        }
+
+        /* Default state: Hide password text, show dots */
+        .pw-text { display: none; }
+        .pw-dots { display: inline; }
+
+        /* Checked state: Show password text, hide dots */
+        .pw-toggle:checked ~ .pw-label .pw-text { display: inline; color: var(--primary); font-weight: 600; }
+        .pw-toggle:checked ~ .pw-label .pw-dots { display: none; }
+        .pw-toggle:checked ~ .pw-label { background: #e0e7ff; }
+        /* ---------------------------- */
+
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 1rem;
+        }
+        .badge-admin { background: #ede9fe; color: var(--primary); }
+        .badge-user { background: #dcfce7; color: #166534; }
+
+        .back-link {
+            margin-top: 2rem;
+            display: inline-block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .back-link:hover { color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <div class="admin-container">
+        <div class="header">
+            <h1>User Management</h1>
+            <a href="/logout" style="color: var(--danger); text-decoration: none; font-weight: 600; font-size: 0.9rem;">Logout</a>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Password (Click to View)</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for username, password in all_users.items() %}
+                <tr>
+                    <td><strong>{{ username }}</strong></td>
+                    <td>
+                        <input type="checkbox" id="pw-{{ loop.index }}" class="pw-toggle">
+                        <label for="pw-{{ loop.index }}" class="pw-label">
+                            <span class="pw-dots">••••••••</span>
+                            <span class="pw-text">{{ password }}</span>
+                        </label>
+                    </td>
+                    <td>
+                        {% if username == 'admin' %}
+                            <span class="badge badge-admin">Admin</span>
+                        {% else %}
+                            <span class="badge badge-user">User</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <a href="/" class="back-link">← Back to Home</a>
+    </div>
+
+</body>
+</html>

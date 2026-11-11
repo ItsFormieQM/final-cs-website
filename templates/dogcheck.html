@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>room_of_dog</title>
+    <style>
+        body {
+            background-color: #000;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            /* Using standard monospaced fonts as fallback */
+            font-family: 'Determination Mono', 'Courier New', monospace;
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .label {
+            margin-bottom: 20px;
+            font-size: 24px;
+            line-height: 1.2;
+            letter-spacing: 1px;
+        }
+
+        /* FIX: We define the frames to swap exactly at the 50% mark.
+           By using 0-50% for frame 1 and 50-100% for frame 2, 
+           there is no "gap" for the background to disappear.
+        */
+        @keyframes dog-logic {
+            0%, 49.9% {
+                background-image: url("{{ url_for('static', filename=item_data.frames[0]) }}");
+            }
+            50%, 100% {
+                background-image: url("{{ url_for('static', filename=item_data.frames[1]) }}");
+            }
+        }
+
+        .viewer {
+            width: 200px;
+            height: 200px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            
+            /* Essential for that retro pixel look */
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+
+            /* The 'steps(1)' tells CSS to jump between frames 
+               instead of trying to 'fade' them.
+            */
+            animation: dog-logic {{ item_data.anim_speed }}s infinite steps(1);
+            
+            border: none;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <audio autoplay loop>
+        <source src="{{ url_for('static', filename=song) }}" type="audio/ogg">
+    </audio>
+
+    <div class="container">
+        <div class="label">bro? really? ofc this will happen lol...</div>
+        <div class="label">so i suggest you press the back button and stop link hopping... unless you want to hear the music...</div>
+        <div class="label">sincerely, Formie.</div>
+
+        <div class="viewer"></div>
+    </div>
+</body>
+
+</html>
